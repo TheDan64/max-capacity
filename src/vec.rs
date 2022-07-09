@@ -61,6 +61,6 @@ impl<T> Vec<T> {
 
 impl<T> Display for Vec<T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
-        write!(fmt, "Vec<{}> {}", type_name::<T>(), self.1.name)
+        write!(fmt, "{}: Vec<{}>", type_name::<T>(), self.1.name)
     }
 }

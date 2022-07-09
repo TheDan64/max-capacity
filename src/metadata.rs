@@ -1,5 +1,6 @@
 use uuid::Uuid;
 
+#[derive(Clone, Debug)]
 pub(crate) struct MetaData {
     pub(crate) name: String,
 }
