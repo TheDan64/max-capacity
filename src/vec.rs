@@ -1,21 +1,10 @@
+use crate::metadata::MetaData;
+
 use log::{info, warn};
-use uuid::Uuid;
 
 use std::any::type_name;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::vec::Vec as StdVec;
-
-struct MetaData {
-    name: String,
-}
-
-impl Default for MetaData {
-    fn default() -> Self {
-        MetaData {
-            name: Uuid::new_v4().to_string(),
-        }
-    }
-}
 
 pub struct Vec<T>(StdVec<T>, MetaData);
 
