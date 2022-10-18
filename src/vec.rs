@@ -26,11 +26,7 @@ impl<T> Vec<T> {
 
     pub fn push(&mut self, item: T) {
         if self.at_capacity() {
-            warn!(
-                "{} attempted to exceed capacity {}",
-                self,
-                self.0.capacity()
-            );
+            warn!("{} exceeded capacity {}", self, self.0.capacity());
         }
 
         self.0.push(item);

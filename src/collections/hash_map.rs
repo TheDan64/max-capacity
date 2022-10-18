@@ -1,6 +1,6 @@
 use crate::metadata::MetaData;
 
-use log::{info, warn};
+use log::warn;
 
 use std::any::type_name;
 use std::borrow::Borrow;
@@ -25,7 +25,7 @@ impl<K, V> HashMap<K, V, RandomState> {
     /// # Examples
     ///
     /// ```
-    /// use mac_capacity::collections::HashMap;
+    /// use max_capacity::collections::HashMap;
     /// let mut map: HashMap<&str, i32> = HashMap::new();
     /// ```
     #[inline]
@@ -759,6 +759,26 @@ impl<K, V, S> IntoIterator for HashMap<K, V, S> {
     }
 }
 
+impl<'a, K, V, S> IntoIterator for &'a HashMap<K, V, S> {
+    type Item = (&'a K, &'a V);
+    type IntoIter = Iter<'a, K, V>;
+
+    #[inline]
+    fn into_iter(self) -> Iter<'a, K, V> {
+        self.0.iter()
+    }
+}
+
+impl<'a, K, V, S> IntoIterator for &'a mut HashMap<K, V, S> {
+    type Item = (&'a K, &'a mut V);
+    type IntoIter = IterMut<'a, K, V>;
+
+    #[inline]
+    fn into_iter(self) -> IterMut<'a, K, V> {
+        self.0.iter_mut()
+    }
+}
+
 impl<K, V, S> Clone for HashMap<K, V, S>
 where
     K: Clone,
@@ -804,7 +824,7 @@ impl<K, V, S> Display for HashMap<K, V, S> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
         write!(
             fmt,
-            "{}: Vec<{}, {}>",
+            "{}: HashMap<{}, {}>",
             type_name::<K>(),
             type_name::<V>(),
             self.1.name
@@ -836,4 +856,77 @@ where
     fn index(&self, key: &Q) -> &V {
         self.0.get(key).expect("no entry found for key")
     }
+}
+
+impl<K, V, const N: usize> From<[(K, V); N]> for HashMap<K, V, RandomState>
+where
+    K: Eq + Hash,
+{
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    ///
+    /// let map1 = HashMap::from([(1, 2), (3, 4)]);
+    /// let map2: HashMap<_, _> = [(1, 2), (3, 4)].into();
+    /// assert_eq!(map1, map2);
+    /// ```
+    fn from(arr: [(K, V); N]) -> Self {
+        Self(StdHashMap::from_iter(arr), MetaData::default())
+    }
+}
+
+impl<K, V, S> FromIterator<(K, V)> for HashMap<K, V, S>
+where
+    K: Eq + Hash,
+    S: BuildHasher + Default,
+{
+    fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> HashMap<K, V, S> {
+        let mut map = HashMap::with_hasher(Default::default());
+        map.extend(iter);
+        map
+    }
+}
+
+impl<K, V, S> Extend<(K, V)> for HashMap<K, V, S>
+where
+    K: Eq + Hash,
+    S: BuildHasher,
+{
+    #[inline]
+    fn extend<T: IntoIterator<Item = (K, V)>>(&mut self, iter: T) {
+        self.0.extend(iter)
+    }
+
+    // #[inline]
+    // fn extend_one(&mut self, (k, v): (K, V)) {
+    //     self.0.insert(k, v);
+    // }
+
+    // #[inline]
+    // fn extend_reserve(&mut self, additional: usize) {
+    //     self.0.extend_reserve(additional);
+    // }
+}
+
+impl<'a, K, V, S> Extend<(&'a K, &'a V)> for HashMap<K, V, S>
+where
+    K: Eq + Hash + Copy,
+    V: Copy,
+    S: BuildHasher,
+{
+    #[inline]
+    fn extend<T: IntoIterator<Item = (&'a K, &'a V)>>(&mut self, iter: T) {
+        self.0.extend(iter)
+    }
+
+    // #[inline]
+    // fn extend_one(&mut self, (&k, &v): (&'a K, &'a V)) {
+    //     self.base.insert(k, v);
+    // }
+
+    // #[inline]
+    // fn extend_reserve(&mut self, additional: usize) {
+    //     Extend::<(K, V)>::extend_reserve(self, additional)
+    // }
 }
