@@ -1,5 +1,4 @@
-use crate::metadata::MetaData;
-
+use crate::{Report, Uid};
 use log::warn;
 
 use std::any::type_name;
@@ -13,7 +12,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::hash::{BuildHasher, Hash};
 use std::ops::Index;
 
-pub struct HashMap<K, V, S = RandomState>(StdHashMap<K, V, S>, MetaData);
+pub struct HashMap<K, V, S = RandomState>(StdHashMap<K, V, S>, Uid);
 
 // Std
 impl<K, V> HashMap<K, V, RandomState> {
@@ -77,7 +76,7 @@ impl<K, V, S> HashMap<K, V, S> {
     /// ```
     #[inline]
     pub fn with_hasher(hash_builder: S) -> HashMap<K, V, S> {
-        Self(StdHashMap::with_hasher(hash_builder), MetaData::default())
+        Self(StdHashMap::with_hasher(hash_builder), Uid::new())
     }
 
     /// Creates an empty `HashMap` with the specified capacity, using `hash_builder`
@@ -108,7 +107,7 @@ impl<K, V, S> HashMap<K, V, S> {
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> HashMap<K, V, S> {
         Self(
             StdHashMap::with_capacity_and_hasher(capacity, hash_builder),
-            MetaData::default(),
+            Uid::new(),
         )
     }
 
@@ -787,7 +786,7 @@ where
 {
     #[inline]
     fn clone(&self) -> Self {
-        Self(self.0.clone(), self.1.clone())
+        Self(self.0.clone(), self.1)
     }
 
     #[inline]
@@ -803,31 +802,25 @@ impl<K, V, S> HashMap<K, V, S> {
         self.0.len() == self.0.capacity()
     }
 
-    pub fn with_name(self, name: &str) -> Self {
-        let md = MetaData {
-            name: name.to_owned(),
-            ..self.1
-        };
+    pub fn set_name(&mut self, name: &str) {
+        let report = &mut Report[self.1];
+        report.ty_name = name.to_owned();
+    }
 
-        Self(self.0, md)
+    pub fn with_name(mut self, name: &str) -> Self {
+        self.set_name(name);
+        self
     }
 }
 
-// TODO: log stats on drop
-// impl<K, V, S> Drop for HashMap<K, V, S> {
-//     fn drop(&mut self) {
-//         info!("Dropped {}", self)
-//     }
-// }
-
 impl<K, V, S> Display for HashMap<K, V, S> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
+        let name = &Report[self.1].ty_name;
         write!(
             fmt,
-            "{}: HashMap<{}, {}>",
+            "{name}: HashMap<{}, {}>",
             type_name::<K>(),
             type_name::<V>(),
-            self.1.name
         )
     }
 }
@@ -835,7 +828,11 @@ impl<K, V, S> Display for HashMap<K, V, S> {
 // Std
 impl<K, V, S: Default> Default for HashMap<K, V, S> {
     fn default() -> Self {
-        Self(StdHashMap::default(), MetaData::default())
+        let id = Uid::new();
+
+        Report::insert(id);
+
+        Self(StdHashMap::default(), id)
     }
 }
 
@@ -872,7 +869,7 @@ where
     /// assert_eq!(map1, map2);
     /// ```
     fn from(arr: [(K, V); N]) -> Self {
-        Self(StdHashMap::from_iter(arr), MetaData::default())
+        Self(StdHashMap::from_iter(arr), Uid::new())
     }
 }
 

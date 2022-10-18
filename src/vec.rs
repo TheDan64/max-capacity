@@ -1,16 +1,16 @@
-use crate::metadata::MetaData;
-
 use log::{info, warn};
 
 use std::any::type_name;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::vec::Vec as StdVec;
 
-pub struct Vec<T>(StdVec<T>, MetaData);
+use crate::{Report, Uid};
+
+pub struct Vec<T>(StdVec<T>, Uid);
 
 impl<T> Default for Vec<T> {
     fn default() -> Self {
-        Self(StdVec::new(), MetaData::default())
+        Self(StdVec::new(), Uid::new())
     }
 }
 
@@ -21,7 +21,7 @@ impl<T> Vec<T> {
     }
 
     pub fn with_capacity(cap: usize) -> Self {
-        Self(StdVec::with_capacity(cap), MetaData::default())
+        Self(StdVec::with_capacity(cap), Uid::new())
     }
 
     pub fn push(&mut self, item: T) {
@@ -45,18 +45,20 @@ impl<T> Vec<T> {
         self.0.len() == self.0.capacity()
     }
 
-    pub fn with_name(self, name: &str) -> Self {
-        let md = MetaData {
-            name: name.to_owned(),
-            ..self.1
-        };
+    pub fn set_name(&mut self, name: &str) {
+        let report = &mut Report[self.1];
+        report.ty_name = name.to_owned();
+    }
 
-        Self(self.0, md)
+    pub fn with_name(mut self, name: &str) -> Self {
+        self.set_name(name);
+        self
     }
 }
 
 impl<T> Display for Vec<T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
-        write!(fmt, "{}: Vec<{}>", type_name::<T>(), self.1.name)
+        let name = &Report[self.1].ty_name;
+        write!(fmt, "{name}: Vec<{}>", type_name::<T>())
     }
 }
