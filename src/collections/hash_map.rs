@@ -75,7 +75,7 @@ impl<K, V, S> HashMap<K, V, S> {
     /// ```
     #[inline]
     pub fn with_hasher(hash_builder: S) -> HashMap<K, V, S> {
-        Self(StdHashMap::with_hasher(hash_builder), Uid::new())
+        Self(StdHashMap::with_hasher(hash_builder), Report::new())
     }
 
     /// Creates an empty `HashMap` with the specified capacity, using `hash_builder`
@@ -106,7 +106,7 @@ impl<K, V, S> HashMap<K, V, S> {
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> HashMap<K, V, S> {
         Self(
             StdHashMap::with_capacity_and_hasher(capacity, hash_builder),
-            Uid::new(),
+            Report::new(),
         )
     }
 
@@ -895,7 +895,7 @@ where
     /// assert_eq!(map1, map2);
     /// ```
     fn from(arr: [(K, V); N]) -> Self {
-        Self(StdHashMap::from_iter(arr), Uid::new())
+        Self(StdHashMap::from_iter(arr), Report::new())
     }
 }
 

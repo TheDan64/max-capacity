@@ -10,7 +10,7 @@ pub struct Vec<T>(StdVec<T>, Uid);
 
 impl<T> Default for Vec<T> {
     fn default() -> Self {
-        Self(StdVec::new(), Uid::new())
+        Self(StdVec::new(), Report::new())
     }
 }
 

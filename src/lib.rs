@@ -11,26 +11,29 @@ pub mod vec;
 pub(crate) struct Uid(u64);
 
 impl Uid {
-    pub fn new() -> Self {
+    fn new() -> Self {
         static NEXT_UID: AtomicU64 = AtomicU64::new(0);
 
         Uid(NEXT_UID.fetch_add(1, Ordering::Relaxed))
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum ReportEvent {
     CapacityIncrease(usize, usize),
     CapacityDecrease(usize, usize),
 }
 
-#[derive(Default)]
-pub(crate) struct SubReport {
+#[derive(Default, Debug)]
+pub(crate) struct LineItem {
     pub instance_name: String,
     pub events: Vec<ReportEvent>,
-    pub with_capacity: Option<usize>,
+    /// Defines an objective limit in capacity that should not be passed;
+    /// this might be the with_capacity method or even a shrink or reserve call.
+    pub max_capacity: Option<usize>,
 }
 
-static REPORT_DATA: OnceCell<DashMap<Uid, SubReport>> = OnceCell::new();
+static REPORT_DATA: OnceCell<DashMap<Uid, LineItem>> = OnceCell::new();
 
 pub struct Report;
 
@@ -41,17 +44,19 @@ impl Report {
         let id = Uid::new();
         REPORT_DATA
             .get_or_init(DashMap::new)
-            .insert(id, SubReport::default());
+            .insert(id, LineItem::default());
         id
     }
 
     pub fn print() {
         for ref_multi in REPORT_DATA.get_or_init(DashMap::new).iter() {
             let (id, events) = ref_multi.pair();
+            // TODO: Use the tabled or prettytable-rs crates
+            dbg!(id, events);
         }
     }
 
-    pub(crate) fn get(id: Uid) -> Ref<'static, Uid, SubReport> {
+    pub(crate) fn get(id: Uid) -> Ref<'static, Uid, LineItem> {
         REPORT_DATA
             .get_or_init(DashMap::new)
             .entry(id)
@@ -59,7 +64,7 @@ impl Report {
             .downgrade()
     }
 
-    pub(crate) fn get_mut(id: Uid) -> RefMut<'static, Uid, SubReport> {
+    pub(crate) fn get_mut(id: Uid) -> RefMut<'static, Uid, LineItem> {
         REPORT_DATA.get_or_init(DashMap::new).entry(id).or_default()
     }
 }
