@@ -38,9 +38,7 @@ static REPORT_DATA: OnceCell<DashMap<Uid, LineItem>> = OnceCell::new();
 pub struct Report;
 
 impl Report {
-    // REVIEW: Maybe Uid::new() should insert into Report record?
-    #[allow(clippy::new_ret_no_self)]
-    pub(crate) fn new() -> Uid {
+    pub(crate) fn new_line_item() -> Uid {
         let id = Uid::new();
         REPORT_DATA
             .get_or_init(DashMap::new)

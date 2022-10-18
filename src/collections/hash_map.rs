@@ -75,7 +75,10 @@ impl<K, V, S> HashMap<K, V, S> {
     /// ```
     #[inline]
     pub fn with_hasher(hash_builder: S) -> HashMap<K, V, S> {
-        Self(StdHashMap::with_hasher(hash_builder), Report::new())
+        Self(
+            StdHashMap::with_hasher(hash_builder),
+            Report::new_line_item(),
+        )
     }
 
     /// Creates an empty `HashMap` with the specified capacity, using `hash_builder`
@@ -106,7 +109,7 @@ impl<K, V, S> HashMap<K, V, S> {
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> HashMap<K, V, S> {
         Self(
             StdHashMap::with_capacity_and_hasher(capacity, hash_builder),
-            Report::new(),
+            Report::new_line_item(),
         )
     }
 
@@ -858,7 +861,7 @@ impl<K, V, S> Display for HashMap<K, V, S> {
 // Std
 impl<K, V, S: Default> Default for HashMap<K, V, S> {
     fn default() -> Self {
-        Self(StdHashMap::default(), Report::new())
+        Self(StdHashMap::default(), Report::new_line_item())
     }
 }
 
@@ -895,7 +898,7 @@ where
     /// assert_eq!(map1, map2);
     /// ```
     fn from(arr: [(K, V); N]) -> Self {
-        Self(StdHashMap::from_iter(arr), Report::new())
+        Self(StdHashMap::from_iter(arr), Report::new_line_item())
     }
 }
 

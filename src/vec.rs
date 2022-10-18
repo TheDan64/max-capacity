@@ -10,7 +10,7 @@ pub struct Vec<T>(StdVec<T>, Uid);
 
 impl<T> Default for Vec<T> {
     fn default() -> Self {
-        Self(StdVec::new(), Report::new())
+        Self(StdVec::new(), Report::new_line_item())
     }
 }
 
@@ -21,7 +21,7 @@ impl<T> Vec<T> {
     }
 
     pub fn with_capacity(cap: usize) -> Self {
-        Self(StdVec::with_capacity(cap), Uid::new())
+        Self(StdVec::with_capacity(cap), Report::new_line_item())
     }
 
     pub fn push(&mut self, item: T) {
