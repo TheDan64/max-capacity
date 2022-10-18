@@ -1,5 +1,4 @@
-use crate::{Report, Uid};
-use log::warn;
+use crate::{Report, ReportEvent, Uid};
 
 use std::any::type_name;
 use std::borrow::Borrow;
@@ -442,7 +441,16 @@ where
     /// ```
     #[inline]
     pub fn reserve(&mut self, additional: usize) {
-        self.0.reserve(additional)
+        let current_cap = self.0.capacity();
+        self.0.reserve(additional);
+
+        if self.0.capacity() < current_cap {
+            let mut report = Report::get_mut(self.1);
+            report.events.push(ReportEvent::CapacityIncrease(
+                current_cap,
+                self.0.capacity(),
+            ));
+        }
     }
 
     /// Tries to reserve capacity for at least `additional` more elements to be inserted
@@ -485,7 +493,16 @@ where
     /// ```
     #[inline]
     pub fn shrink_to_fit(&mut self) {
+        let current_cap = self.0.capacity();
         self.0.shrink_to_fit();
+
+        if self.0.capacity() < current_cap {
+            let mut report = Report::get_mut(self.1);
+            report.events.push(ReportEvent::CapacityDecrease(
+                current_cap,
+                self.0.capacity(),
+            ));
+        }
     }
 
     /// Shrinks the capacity of the map with a lower limit. It will drop
@@ -510,7 +527,16 @@ where
     /// ```
     #[inline]
     pub fn shrink_to(&mut self, min_capacity: usize) {
+        let current_cap = self.0.capacity();
         self.0.shrink_to(min_capacity);
+
+        if self.0.capacity() < current_cap {
+            let mut report = Report::get_mut(self.1);
+            report.events.push(ReportEvent::CapacityDecrease(
+                current_cap,
+                self.0.capacity(),
+            ));
+        }
     }
 
     /// Gets the given key's corresponding entry in the map for in-place manipulation.
@@ -666,11 +692,19 @@ where
     /// assert_eq!(map[&37], "c");
     /// ```
     pub fn insert(&mut self, k: K, v: V) -> Option<V> {
-        if self.at_capacity() && !self.contains_key(&k) {
-            warn!("{} exceeded capacity {}", self, self.0.capacity());
+        let current_cap = self.0.capacity();
+        let ret = self.0.insert(k, v);
+        let exceeds_cap = self.0.capacity() > current_cap;
+
+        if exceeds_cap {
+            let mut report = Report::get_mut(self.1);
+            report.events.push(ReportEvent::CapacityIncrease(
+                current_cap,
+                self.0.capacity(),
+            ));
         }
 
-        self.0.insert(k, v)
+        ret
     }
 
     /// Removes a key from the map, returning the value at the key if the key
@@ -798,13 +832,9 @@ where
 
 // Extra
 impl<K, V, S> HashMap<K, V, S> {
-    fn at_capacity(&self) -> bool {
-        self.0.len() == self.0.capacity()
-    }
-
     pub fn set_name(&mut self, name: &str) {
-        let report = &mut Report[self.1];
-        report.ty_name = name.to_owned();
+        let mut report = Report::get_mut(self.1);
+        report.instance_name = name.to_owned();
     }
 
     pub fn with_name(mut self, name: &str) -> Self {
@@ -815,7 +845,7 @@ impl<K, V, S> HashMap<K, V, S> {
 
 impl<K, V, S> Display for HashMap<K, V, S> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
-        let name = &Report[self.1].ty_name;
+        let name = &Report::get(self.1).instance_name;
         write!(
             fmt,
             "{name}: HashMap<{}, {}>",
@@ -828,11 +858,7 @@ impl<K, V, S> Display for HashMap<K, V, S> {
 // Std
 impl<K, V, S: Default> Default for HashMap<K, V, S> {
     fn default() -> Self {
-        let id = Uid::new();
-
-        Report::insert(id);
-
-        Self(StdHashMap::default(), id)
+        Self(StdHashMap::default(), Report::new())
     }
 }
 

@@ -1,6 +1,6 @@
-use std::ops::{Index, IndexMut};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 
@@ -25,8 +25,9 @@ pub(crate) enum ReportEvent {
 
 #[derive(Default)]
 pub(crate) struct SubReport {
-    pub ty_name: String,
+    pub instance_name: String,
     pub events: Vec<ReportEvent>,
+    pub with_capacity: Option<usize>,
 }
 
 static REPORT_DATA: OnceCell<DashMap<Uid, SubReport>> = OnceCell::new();
@@ -34,10 +35,14 @@ static REPORT_DATA: OnceCell<DashMap<Uid, SubReport>> = OnceCell::new();
 pub struct Report;
 
 impl Report {
-    pub(crate) fn insert(id: Uid) {
+    // REVIEW: Maybe Uid::new() should insert into Report record?
+    #[allow(clippy::new_ret_no_self)]
+    pub(crate) fn new() -> Uid {
+        let id = Uid::new();
         REPORT_DATA
             .get_or_init(DashMap::new)
             .insert(id, SubReport::default());
+        id
     }
 
     pub fn print() {
@@ -45,18 +50,16 @@ impl Report {
             let (id, events) = ref_multi.pair();
         }
     }
-}
 
-impl Index<Uid> for Report {
-    type Output = SubReport;
-
-    fn index(&self, index: Uid) -> &Self::Output {
-        unimplemented!()
+    pub(crate) fn get(id: Uid) -> Ref<'static, Uid, SubReport> {
+        REPORT_DATA
+            .get_or_init(DashMap::new)
+            .entry(id)
+            .or_default()
+            .downgrade()
     }
-}
 
-impl IndexMut<Uid> for Report {
-    fn index_mut(&mut self, index: Uid) -> &mut Self::Output {
-        unimplemented!()
+    pub(crate) fn get_mut(id: Uid) -> RefMut<'static, Uid, SubReport> {
+        REPORT_DATA.get_or_init(DashMap::new).entry(id).or_default()
     }
 }

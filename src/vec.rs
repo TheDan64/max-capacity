@@ -25,6 +25,7 @@ impl<T> Vec<T> {
     }
 
     pub fn push(&mut self, item: T) {
+        // let current_cap = self.0.capacity();
         if self.at_capacity() {
             warn!("{} exceeded capacity {}", self, self.0.capacity());
         }
@@ -41,13 +42,14 @@ impl<T> Vec<T> {
 
 // Extra Vec methods
 impl<T> Vec<T> {
+    #[inline]
     fn at_capacity(&self) -> bool {
         self.0.len() == self.0.capacity()
     }
 
     pub fn set_name(&mut self, name: &str) {
-        let report = &mut Report[self.1];
-        report.ty_name = name.to_owned();
+        let mut report = Report::get_mut(self.1);
+        report.instance_name = name.to_owned();
     }
 
     pub fn with_name(mut self, name: &str) -> Self {
@@ -58,7 +60,7 @@ impl<T> Vec<T> {
 
 impl<T> Display for Vec<T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
-        let name = &Report[self.1].ty_name;
+        let name = &Report::get(self.1).instance_name;
         write!(fmt, "{name}: Vec<{}>", type_name::<T>())
     }
 }
