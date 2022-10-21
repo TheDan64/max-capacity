@@ -4,6 +4,7 @@ use std::any::type_name;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::vec::Vec as StdVec;
 
+use crate::sealed::Reportable;
 use crate::{Report, Uid};
 
 pub struct Vec<T>(StdVec<T>, Uid);
@@ -62,5 +63,11 @@ impl<T> Display for Vec<T> {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> FmtResult {
         let name = &Report::get(self.1).instance_name;
         write!(fmt, "{name}: Vec<{}>", type_name::<T>())
+    }
+}
+
+impl<T> Reportable for Vec<T> {
+    fn id(&self) -> Uid {
+        self.1
     }
 }

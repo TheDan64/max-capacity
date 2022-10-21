@@ -1,3 +1,4 @@
+use crate::sealed::Reportable;
 use crate::{Report, ReportEvent, Uid};
 
 use std::any::type_name;
@@ -107,9 +108,14 @@ impl<K, V, S> HashMap<K, V, S> {
     /// ```
     #[inline]
     pub fn with_capacity_and_hasher(capacity: usize, hash_builder: S) -> HashMap<K, V, S> {
+        let id = Report::new_line_item();
+        let mut li = Report::get_mut(id);
+
+        li.events.push(ReportEvent::MaxCapacitySet(capacity));
+
         Self(
             StdHashMap::with_capacity_and_hasher(capacity, hash_builder),
-            Report::new_line_item(),
+            id,
         )
     }
 
@@ -844,11 +850,6 @@ impl<K, V, S> HashMap<K, V, S> {
         self.set_name(name);
         self
     }
-
-    #[cfg(test)]
-    pub(crate) fn get_line_item_id(&self) -> Uid {
-        self.1
-    }
 }
 
 impl<K, V, S> Display for HashMap<K, V, S> {
@@ -960,4 +961,61 @@ where
     // fn extend_reserve(&mut self, additional: usize) {
     //     Extend::<(K, V)>::extend_reserve(self, additional)
     // }
+}
+
+impl<K, V, S> Reportable for HashMap<K, V, S> {
+    fn id(&self) -> Uid {
+        self.1
+    }
+}
+
+// TODO: Allocations via the entry API need to be supported
+#[test]
+fn test_basic_report() {
+    let mut map = HashMap::<u32, ()>::new().with_name("my_map");
+
+    map.insert(0, ());
+    map.insert(1, ());
+    map.insert(2, ());
+    map.insert(3, ());
+
+    let id = map.id();
+    let line_item = Report::get(id);
+
+    assert_eq!(line_item.instance_name, "my_map");
+    assert_eq!(line_item.events[0], ReportEvent::CapacityIncrease(0, 3));
+    assert_eq!(line_item.events[1], ReportEvent::CapacityIncrease(3, 7));
+    assert_eq!(line_item.events.len(), 2);
+
+    // Drop is significant or else dashmap will deadlock when shrink_to is called
+    drop(line_item);
+
+    map.remove(&0);
+    map.remove(&1);
+    map.remove(&2);
+    map.remove(&3);
+    map.shrink_to(0);
+
+    let line_item = Report::get(id);
+
+    assert_eq!(line_item.events[2], ReportEvent::CapacityDecrease(7, 0));
+    assert_eq!(line_item.events.len(), 3);
+}
+
+#[test]
+fn test_exceeds_capacity_report() {
+    let mut map = HashMap::<u32, ()>::with_capacity(3).with_name("my_map");
+
+    map.insert(0, ());
+    map.insert(1, ());
+    map.insert(2, ());
+    map.insert(3, ());
+
+    let id = map.id();
+    let line_item = Report::get(id);
+
+    assert_eq!(line_item.instance_name, "my_map");
+    assert_eq!(line_item.events[0], ReportEvent::MaxCapacitySet(3));
+    assert_eq!(line_item.events[1], ReportEvent::CapacityIncrease(3, 7));
+    assert_eq!(line_item.events.len(), 2);
 }
