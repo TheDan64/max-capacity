@@ -844,6 +844,11 @@ impl<K, V, S> HashMap<K, V, S> {
         self.set_name(name);
         self
     }
+
+    #[cfg(test)]
+    pub(crate) fn get_line_item_id(&self) -> Uid {
+        self.1
+    }
 }
 
 impl<K, V, S> Display for HashMap<K, V, S> {

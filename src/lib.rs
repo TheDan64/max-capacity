@@ -18,8 +18,9 @@ impl Uid {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub(crate) enum ReportEvent {
+    // TODO: Exceeds max capacity?
     CapacityIncrease(usize, usize),
     CapacityDecrease(usize, usize),
 }
@@ -66,3 +67,38 @@ impl Report {
         REPORT_DATA.get_or_init(DashMap::new).entry(id).or_default()
     }
 }
+
+#[test]
+fn test_basic_report() {
+    let mut map = collections::HashMap::<u32, ()>::new().with_name("my_map");
+
+    map.insert(0, ());
+    map.insert(1, ());
+    map.insert(2, ());
+    map.insert(3, ());
+
+    let id = map.get_line_item_id();
+    let line_item = Report::get(id);
+
+    assert_eq!(line_item.instance_name, "my_map");
+    assert_eq!(line_item.events[0], ReportEvent::CapacityIncrease(0, 3));
+    assert_eq!(line_item.events[1], ReportEvent::CapacityIncrease(3, 7));
+    assert_eq!(line_item.events.len(), 2);
+
+    // Drop is significant or else dashmap will deadlock when shrink_to is called
+    drop(line_item);
+
+    map.remove(&0);
+    map.remove(&1);
+    map.remove(&2);
+    map.remove(&3);
+    map.shrink_to(0);
+
+    let line_item = Report::get(id);
+
+    assert_eq!(line_item.events[2], ReportEvent::CapacityDecrease(7, 0));
+    assert_eq!(line_item.events.len(), 3);
+}
+
+#[test]
+fn test_exceeds_capacity_report() {}
