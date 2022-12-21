@@ -1,9 +1,11 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
 use sealed::Reportable;
+use tabled::{Panel, Table, Tabled};
 
 pub mod collections;
 pub mod vec;
@@ -19,7 +21,19 @@ impl Uid {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+impl Default for Uid {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Display for Uid {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "0x{:x}", self.0)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Tabled)]
 pub enum ReportEvent {
     /// Defines an objective limit in capacity that should not be passed;
     /// this might be the with_capacity method or even a shrink or reserve call.
@@ -30,15 +44,22 @@ pub enum ReportEvent {
 
 #[derive(Clone, Default, Debug)]
 pub struct LineItem {
-    // REVIEW: Do we want to print the uid in the report?
-    // pub id: Uid,
+    pub id: Uid,
     pub instance_name: String,
     pub events: Vec<ReportEvent>,
 }
 
 impl LineItem {
     // TODO: Use the tabled or prettytable-rs crates
-    fn print(&self) {}
+    fn print(&self) {
+        let mut table = Table::new(&self.events);
+        table.with(Panel::header(format!(
+            "{} - {}",
+            self.id, self.instance_name
+        )));
+
+        println!("{table}");
+    }
 }
 
 static REPORT_DATA: OnceCell<DashMap<Uid, LineItem>> = OnceCell::new();

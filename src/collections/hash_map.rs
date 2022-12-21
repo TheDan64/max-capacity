@@ -8,7 +8,7 @@ use std::collections::hash_map::{
     ValuesMut,
 };
 use std::collections::{HashMap as StdHashMap, TryReserveError};
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::hash::{BuildHasher, Hash};
 use std::ops::Index;
 
@@ -865,6 +865,16 @@ impl<K, V, S> Display for HashMap<K, V, S> {
 }
 
 // Std
+impl<K, V, S> Debug for HashMap<K, V, S>
+where
+    K: Debug,
+    V: Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        f.debug_map().entries(self.iter()).finish()
+    }
+}
+
 impl<K, V, S: Default> Default for HashMap<K, V, S> {
     fn default() -> Self {
         Self(StdHashMap::default(), Report::new_line_item())
