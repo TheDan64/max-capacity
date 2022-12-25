@@ -1,6 +1,9 @@
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::io::Result as IoResult;
+use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use compact_str::CompactString;
 use dashmap::mapref::one::{Ref, RefMut};
 use dashmap::DashMap;
 use once_cell::sync::OnceCell;
@@ -45,12 +48,11 @@ pub enum ReportEvent {
 #[derive(Clone, Default, Debug)]
 pub struct LineItem {
     pub id: Uid,
-    pub instance_name: String,
+    pub instance_name: CompactString,
     pub events: Vec<ReportEvent>,
 }
 
 impl LineItem {
-    // TODO: Use the tabled or prettytable-rs crates
     fn print(&self) {
         let mut table = Table::new(&self.events);
         table.with(Panel::header(format!(
@@ -69,9 +71,14 @@ pub struct Report;
 impl Report {
     pub(crate) fn new_line_item() -> Uid {
         let id = Uid::new();
-        REPORT_DATA
-            .get_or_init(DashMap::new)
-            .insert(id, LineItem::default());
+        REPORT_DATA.get_or_init(DashMap::new).insert(
+            id,
+            LineItem {
+                id,
+                instance_name: "Unnamed".into(),
+                events: Vec::new(),
+            },
+        );
         id
     }
 
@@ -82,18 +89,24 @@ impl Report {
         }
     }
 
+    pub fn write_to_file(_path: &Path) -> IoResult<()> {
+        unimplemented!()
+    }
+
     pub fn get_line_item<R: Reportable>(reportable: &R) -> LineItem {
+        // We do a clone here because we don't want to risk "leaking" a reference
+        // to the caller which could block further writes if it doesn't get dropped
         Report::get(reportable.id()).clone()
     }
 
+    /// This function (and uses of the return value) must never be made public
+    /// or else it risks deadlocking
     pub(crate) fn get(id: Uid) -> Ref<'static, Uid, LineItem> {
-        REPORT_DATA
-            .get_or_init(DashMap::new)
-            .entry(id)
-            .or_default()
-            .downgrade()
+        Report::get_mut(id).downgrade()
     }
 
+    /// This function (and uses of the return value) must never be made public
+    /// or else it risks deadlocking
     pub(crate) fn get_mut(id: Uid) -> RefMut<'static, Uid, LineItem> {
         REPORT_DATA.get_or_init(DashMap::new).entry(id).or_default()
     }

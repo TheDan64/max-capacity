@@ -843,7 +843,7 @@ where
 impl<K, V, S> HashMap<K, V, S> {
     pub fn set_name(&mut self, name: &str) {
         let mut report = Report::get_mut(self.1);
-        report.instance_name = name.to_owned();
+        report.instance_name = name.into();
     }
 
     pub fn with_name(mut self, name: &str) -> Self {

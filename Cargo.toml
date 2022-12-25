@@ -7,6 +7,7 @@ edition = "2021"
 readme = "README.md"
 
 [dependencies]
+compact_str = "0.6"
 dashmap = "5"
 log = { version = "0.4" }
 once_cell = "1"
